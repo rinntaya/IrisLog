@@ -1,0 +1,19 @@
+cmake_minimum_required(VERSION 3.28)
+project(IrisLog)
+
+set(CMAKE_CXX_STANDARD 17)
+
+add_library(IrisLog STATIC src/IrisLog.cpp
+)
+
+target_include_directories(IrisLog PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>
+)
+
+option(IRISLOG_BUILD_TESTS "Build tests for IrisLog" ON)
+
+if(IRISLOG_BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
+endif()
