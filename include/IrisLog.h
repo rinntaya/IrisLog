@@ -1,6 +1,7 @@
 #pragma once
 
 #include <atomic>
+#include <optional>
 #include <sstream>
 #include <string_view>
 
@@ -9,12 +10,6 @@
 #define IRISLOG_STATIC_MAX_LEVEL ::IrisLog::Level::Trace
 #endif
 
-
-#define TRACE ::IrisLog::Level::Trace
-#define DEBUG ::IrisLog::Level::Debug
-#define INFO  ::IrisLog::Level::Info
-#define WARN  ::IrisLog::Level::Warn
-#define ERROR ::IrisLog::Level::Error
 
 namespace IrisLog
 {
@@ -86,7 +81,8 @@ namespace IrisLog
     class Logstream
     {
     public:
-        explicit Logstream(std::string_view target, Logger* logger);
+        explicit Logstream(Logger* logger, std::string_view target);
+        explicit Logstream(Logger* logger);
         void reset(Level level);
 
         template<typename T>
@@ -118,9 +114,16 @@ namespace IrisLog
             reset(T); return *this;
         }
 
+        void set_logger(Logger* logger) {
+            logger_ = logger;
+        }
+        void set_target(std::string_view target) {
+            target_ = target;
+        }
+
     private:
         Level level_ = Level::Info;
-        std::string_view target_;
+        std::optional<std::string_view> target_;
         std::atomic<Logger *> logger_;
 
         static std::ostringstream& get_oss() {
@@ -128,8 +131,6 @@ namespace IrisLog
             return oss;
         }
     };
-
-
 
     class LoggerInstance
     {
@@ -146,14 +147,21 @@ namespace IrisLog
 
         [[nodiscard]] Logstream getStream(const std::string_view target) const noexcept
         {
-            return Logstream(target, this->logger());
+            return Logstream(this->logger(), target);
         }
 
+        [[nodiscard]] Logstream getStream() const noexcept
+        {
+            return Logstream(this->logger());
+        }
     private:
         LoggerInstance() noexcept = default;
         std::atomic<Logger *> logger_{nullptr};
     };
+
+
     extern LoggerInstance& instance;
+    extern Logstream logger;
 
 
     namespace Detail
@@ -204,3 +212,6 @@ namespace IrisLog
 #define LOG_INFO_T(target, ...)  IRISLOG_LOGGER(::IrisLog::Level::Info, target, __VA_ARGS__)
 #define LOG_WARN_T(target, ...)  IRISLOG_LOGGER(::IrisLog::Level::Warn, target, __VA_ARGS__)
 #define LOG_ERROR_T(target, ...) IRISLOG_LOGGER(::IrisLog::Level::Error, target, __VA_ARGS__)
+
+#define LOGGER(x) ::IrisLog::logger.set_target(__func__);\
+::IrisLog::logger.log<x>()

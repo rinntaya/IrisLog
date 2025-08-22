@@ -2,8 +2,11 @@
 
 namespace IrisLog
 {
-    LoggerInstance& instance = LoggerInstance::instance();
 
+    inline NonLogger default_logger;
+
+    LoggerInstance& instance = LoggerInstance::instance();
+    Logstream logger(&default_logger);
 
     bool NonLogger::enable(const Metadata& metadata) noexcept
     { return false; }
@@ -16,8 +19,12 @@ namespace IrisLog
     {
     }
 
-    Logstream::Logstream(const std::string_view target, Logger* logger): target_(target), logger_(logger)
+    Logstream::Logstream(Logger* logger, const std::string_view target): target_(target), logger_(logger)
     {}
+
+    Logstream::Logstream(Logger* logger): logger_(logger)
+    {
+    }
 
     void Logstream::reset(const Level level)
     {
@@ -30,7 +37,7 @@ namespace IrisLog
     {
         auto& local_oss = get_oss();
         if (const auto logger = logger_.load(std::memory_order_acquire)) {
-            if (const Metadata md{level_, target_}; logger->enable(md)) {
+            if (const Metadata md{level_, target_.value_or("unknown")}; logger->enable(md)) {
                 const std::string msg = local_oss.str(); // 局部复制，线程安全
                 const Record rec{md, msg, __FILE__, __LINE__};
                 logger->log(rec);
@@ -44,6 +51,7 @@ namespace IrisLog
     {
         if (logger == nullptr) return false;
         logger_.store(logger, std::memory_order_release);
+        IrisLog::logger.set_logger(logger);
         return true;
     }
 

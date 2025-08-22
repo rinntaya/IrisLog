@@ -77,6 +77,7 @@ namespace Test::First
     void func()
     {
         LOG_INFO("This is info message");
+        LOGGER(Level::Info) << "Stream Log" << std::endl;
     }
 
 }
@@ -104,7 +105,7 @@ int main()
     auto logger = instance.getStream("master");
 
     logger.log<Level::Info>() << "test" << (1+1) << std::endl;
-    logger(DEBUG) << "test" << (1+1) << std::endl;
+    logger(Level::Debug) << "test" << (1+1) << std::endl;
 
 
     return 0;
