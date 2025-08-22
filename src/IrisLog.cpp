@@ -37,9 +37,9 @@ namespace IrisLog
     {
         auto& local_oss = get_oss();
         if (const auto logger = logger_.load(std::memory_order_acquire)) {
-            if (const Metadata md{level_, target_.value_or("unknown")}; logger->enable(md)) {
+            if (const Metadata md{level_, target_.value_or(local_target_)}; logger->enable(md)) {
                 const std::string msg = local_oss.str(); // 局部复制，线程安全
-                const Record rec{md, msg, __FILE__, __LINE__};
+                const Record rec{md, msg, file_, line_};
                 logger->log(rec);
             }
         }

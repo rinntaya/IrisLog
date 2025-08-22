@@ -104,26 +104,27 @@ namespace IrisLog
 
 
         template<Level T>
-        Logstream& log()
+        Logstream& log(const std::string_view file, const uint32_t line, const std::string_view target)
         {
-            reset(T); return *this;
-        }
-
-        Logstream& operator()(const Level T)
-        {
+            file_ = file;
+            line_ = line;
+            local_target_ = target;
             reset(T); return *this;
         }
 
         void set_logger(Logger* logger) {
             logger_ = logger;
         }
-        void set_target(std::string_view target) {
+        void set_target(const std::optional<std::string_view>& target) {
             target_ = target;
         }
 
     private:
         Level level_ = Level::Info;
         std::optional<std::string_view> target_;
+        std::string_view file_{"unknown"};
+        std::string_view local_target_{"unknown"};
+        uint32_t line_{0};
         std::atomic<Logger *> logger_;
 
         static std::ostringstream& get_oss() {
@@ -145,15 +146,6 @@ namespace IrisLog
 
         [[nodiscard]] Logger* logger() const noexcept;
 
-        [[nodiscard]] Logstream getStream(const std::string_view target) const noexcept
-        {
-            return Logstream(this->logger(), target);
-        }
-
-        [[nodiscard]] Logstream getStream() const noexcept
-        {
-            return Logstream(this->logger());
-        }
     private:
         LoggerInstance() noexcept = default;
         std::atomic<Logger *> logger_{nullptr};
@@ -213,5 +205,10 @@ namespace IrisLog
 #define LOG_WARN_T(target, ...)  IRISLOG_LOGGER(::IrisLog::Level::Warn, target, __VA_ARGS__)
 #define LOG_ERROR_T(target, ...) IRISLOG_LOGGER(::IrisLog::Level::Error, target, __VA_ARGS__)
 
-#define LOGGER(x) ::IrisLog::logger.set_target(__func__);\
-::IrisLog::logger.log<x>()
+#define LOGGER(x) ::IrisLog::logger.log<x>(__FILE__, __LINE__, __func__)
+
+
+#ifdef IRISLOG_ORIGIN
+#else
+using IL = IrisLog::Level;
+#endif

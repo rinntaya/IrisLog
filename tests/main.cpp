@@ -102,10 +102,12 @@ int main()
 
     std::cout << std::endl;
 
-    auto logger = instance.getStream("master");
 
-    logger.log<Level::Info>() << "test" << (1+1) << std::endl;
-    logger(Level::Debug) << "test" << (1+1) << std::endl;
+
+    logger.set_target("master");
+    LOGGER(Level::Info) << "test" << (1+1) << std::endl;
+    logger.set_target(std::nullopt);
+    LOGGER(Level::Debug) << "test" << (1+1) << std::endl;
 
 
     return 0;
