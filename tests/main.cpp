@@ -63,7 +63,7 @@ public:
                   << color << " " << level_str << " " << Color::Reset
                   << "  " << record.metadata.target
                   << " " << record.file << ":" << record.line
-                  << "  " << record.message
+                  << "  " << record.args
                   << std::endl;
     }
 
@@ -115,22 +115,24 @@ int main()
     ilog_debug("This is debug message");
     Test::First::func();
     ilog_warn("This is warn message");
-    ilog_error("float is : %.2f", pi);
+    ilog_error("float is : %.2f {}", pi);
+    int x = 42;
+    double y = 3.14159;
+    std::string name = "Alice";
+
+    ilog_debug("Hello, {}!\n", name);
+    ilog_debug("x = {:04}, y = {:.2f}\n", x, y);
+
 
     std::cout << std::endl;
 
-
-
-    ilog_t(IL::Info, "master") << "test" << (1+1) << std::endl;
+    ilog_t(iL::Info, "master") << "test" << (1+1) << std::endl;
     logger.set_target(std::nullopt);
-    ilog(Level::Debug) << "test" << (1+1) << std::endl;
-
-    size_t log_count = 10000;
-
-    {
+    ilog(Level::Debug) << "test" << (1+1) << std::endl; {
+        size_t log_count = 10000;
         PerformanceTest test("Logging 10000 messages");
         for (size_t i = 0; i < log_count; ++i) {
-            ilog_debug("Test log number: %zu", i);
+            // ilog_debug("Test log number: %zu", i);
             // ilog(IL::Debug) << "test" << "for" << i << "hello, world!" << std::endl;
         }
     } // 出作用域，自动输出耗时

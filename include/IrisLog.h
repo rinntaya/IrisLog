@@ -11,6 +11,7 @@
 #define IRISLOG_STATIC_MAX_LEVEL ::IrisLog::Level::Trace
 #endif
 
+#include <fmt/format.h>
 
 namespace IrisLog
 {
@@ -51,7 +52,7 @@ namespace IrisLog
     struct Record
     {
         Metadata metadata;
-        std::string_view message;
+        std::string_view args;
         std::string_view file;
         uint32_t line;
         std::string_view module_path;
@@ -194,11 +195,11 @@ namespace IrisLog
         template<typename... Args>
         constexpr std::string _format_string(const char* fmt, Args&&... args)
         {
-            const int len = std::snprintf(nullptr, 0, fmt, args...);
-            if (len <= 0) return {};
-            std::string result(len, '\0');
-            std::snprintf(result.data(), len + 1, fmt, args...);
-            return result;
+            // const int len = std::snprintf(nullptr, 0, fmt, args...);
+            // if (len <= 0) return {};
+            // std::string result(len, '\0');
+            // std::snprintf(result.data(), len + 1, fmt, args...);
+            return fmt::format(fmt, args...);
         }
 
         template<typename... Args>
