@@ -4,6 +4,7 @@
 #include <optional>
 #include <sstream>
 #include <string_view>
+#include <vector>
 
 #ifdef IRISLOG_STATIC_MAX_LEVEL
 #else
@@ -53,7 +54,7 @@ namespace IrisLog
         std::string_view message;
         std::string_view file;
         uint32_t line;
-        // std::string_view module_path;
+        std::string_view module_path;
     };
 
     class Logger
@@ -113,7 +114,7 @@ namespace IrisLog
             if (const auto logger = logger_.load(std::memory_order_acquire)) {
                 if (const Metadata md{level_, target_.value_or(local_target_)}; logger->enable(md)) {
                     const std::string msg = local_oss.str(); // 局部复制，线程安全
-                    const Record rec{md, msg, file_, line_};
+                    const Record rec{md, msg, file_, line_, local_target_};
                     logger->log(rec);
                 }
             }
@@ -182,7 +183,7 @@ namespace IrisLog
     };
 
 
-    inline extern LoggerInstance& instance = LoggerInstance::instance();
+    inline LoggerInstance& instance = LoggerInstance::instance();
     namespace Detail
     {
         constexpr bool _static_level_check(const Level level) noexcept
@@ -201,14 +202,14 @@ namespace IrisLog
         }
 
         template<typename... Args>
-        void _dispatch_log(const Level level, const std::string_view target, const std::string_view file,
-                           const uint32_t line, Args&&... args) noexcept
+        void _dispatch_log(const Level level, const std::string_view func, const std::string_view file,
+                           const uint32_t line, const std::string_view target, Args&&... args) noexcept
         {
             const Metadata metadata{level, target};
             if (auto* logger = instance.logger()) {
                 if (!logger->enable(metadata)) return;
                 const std::string s = _format_string(std::forward<Args>(args)...);
-                logger->log({metadata, s, file, line});
+                logger->log({metadata, s, file, line, func});
             }
         }
     }}
@@ -219,23 +220,25 @@ namespace IrisLog
                         ::IrisLog::Detail::_dispatch_log(level, target, __FILE__, __LINE__, __VA_ARGS__); \
                     } \
                 } while (false)
+#define ilog_trace(...) IRISLOG_LOGGER(::IrisLog::Level::Trace, __func__, __func__, __VA_ARGS__)
+#define ilog_debug(...) IRISLOG_LOGGER(::IrisLog::Level::Debug, __func__, __func__, __VA_ARGS__)
+#define ilog_info(...)  IRISLOG_LOGGER(::IrisLog::Level::Info, __func__, __func__, __VA_ARGS__)
+#define ilog_warn(...)  IRISLOG_LOGGER(::IrisLog::Level::Warn, __func__, __func__, __VA_ARGS__)
+#define ilog_error(...) IRISLOG_LOGGER(::IrisLog::Level::Error, __func__, __func__, __VA_ARGS__)
+#define ilog_fatal(...) IRISLOG_LOGGER(::IrisLog::Level::Fatal, __func__, __func__, __VA_ARGS__)
 
-#define LOG_TRACE(...) IRISLOG_LOGGER(::IrisLog::Level::Trace, __func__, __VA_ARGS__)
-#define LOG_DEBUG(...) IRISLOG_LOGGER(::IrisLog::Level::Debug, __func__, __VA_ARGS__)
-#define LOG_INFO(...)  IRISLOG_LOGGER(::IrisLog::Level::Info, __func__, __VA_ARGS__)
-#define LOG_WARN(...)  IRISLOG_LOGGER(::IrisLog::Level::Warn, __func__, __VA_ARGS__)
-#define LOG_ERROR(...) IRISLOG_LOGGER(::IrisLog::Level::Error, __func__, __VA_ARGS__)
+#define ilog_trace_t(target, ...) IRISLOG_LOGGER(::IrisLog::Level::Trace, __func__, target, __VA_ARGS__)
+#define ilog_debug_t(target, ...) IRISLOG_LOGGER(::IrisLog::Level::Debug, __func__, target, __VA_ARGS__)
+#define ilog_info_t(target, ...)  IRISLOG_LOGGER(::IrisLog::Level::Info, __func__, target, __VA_ARGS__)
+#define ilog_warn_t(target, ...)  IRISLOG_LOGGER(::IrisLog::Level::Warn, __func__, target, __VA_ARGS__)
+#define ilog_error_t(target, ...) IRISLOG_LOGGER(::IrisLog::Level::Error, __func__, target, __VA_ARGS__)
+#define ilog_fatal_t(target, ...) IRISLOG_LOGGER(::IrisLog::Level::Fatal, __func__, target, __VA_ARGS__)
 
-#define LOG_TRACE_T(target, ...) IRISLOG_LOGGER(::IrisLog::Level::Trace, target, __VA_ARGS__)
-#define LOG_DEBUG_T(target, ...) IRISLOG_LOGGER(::IrisLog::Level::Debug, target, __VA_ARGS__)
-#define LOG_INFO_T(target, ...)  IRISLOG_LOGGER(::IrisLog::Level::Info, target, __VA_ARGS__)
-#define LOG_WARN_T(target, ...)  IRISLOG_LOGGER(::IrisLog::Level::Warn, target, __VA_ARGS__)
-#define LOG_ERROR_T(target, ...) IRISLOG_LOGGER(::IrisLog::Level::Error, target, __VA_ARGS__)
-
-#define LOGGER(x) ::IrisLog::logger.log<x>(__FILE__, __LINE__, __func__)
+#define ilog(x) ::IrisLog::logger.log<x>(__FILE__, __LINE__, __func__)
+#define ilog_t(x,t) ::IrisLog::logger.log<x>(__FILE__, __LINE__, t)
 
 
 #ifdef IRISLOG_ORIGIN
 #else
-using IL = IrisLog::Level;
+using iL = IrisLog::Level;
 #endif

@@ -1,4 +1,5 @@
 #include <iostream>
+#include <chrono>
 
 
 #define IRISLOG_STATIC_MAX_LEVEL ::IrisLog::Level::Trace
@@ -76,14 +77,30 @@ namespace Test::First
 {
     void func()
     {
-        LOG_INFO("This is info message");
-        LOGGER(Level::Info) << "Stream Log" << std::endl;
+        ilog_info("This is info message");
+        ilog(Level::Info) << "Stream Log" << std::endl;
     }
 
 }
 
 
 using namespace IrisLog;
+
+class PerformanceTest {
+    std::chrono::high_resolution_clock::time_point start_;
+    std::string name_;
+public:
+    PerformanceTest(const std::string& name) : name_(name) {
+        start_ = std::chrono::high_resolution_clock::now();
+    }
+
+    ~PerformanceTest() {
+        auto end = std::chrono::high_resolution_clock::now();
+        auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start_).count();
+        std::cout << "[PerformanceTest] " << name_ << " finished in " << elapsed_ms << " ms\n";
+    }
+};
+
 
 int main()
 {
@@ -94,21 +111,29 @@ int main()
     double pi = 3.14159;
 
     // 使用日志宏
-    LOG_TRACE("This is trace message");
-    LOG_DEBUG("This is debug message");
+    ilog_trace("This is trace message");
+    ilog_debug("This is debug message");
     Test::First::func();
-    LOG_WARN("This is warn message");
-    LOG_ERROR("float is : %.2f", pi);
+    ilog_warn("This is warn message");
+    ilog_error("float is : %.2f", pi);
 
     std::cout << std::endl;
 
 
 
-    logger.set_target("master");
-    LOGGER(Level::Info) << "test" << (1+1) << std::endl;
+    ilog_t(IL::Info, "master") << "test" << (1+1) << std::endl;
     logger.set_target(std::nullopt);
-    LOGGER(Level::Debug) << "test" << (1+1) << std::endl;
+    ilog(Level::Debug) << "test" << (1+1) << std::endl;
 
+    size_t log_count = 10000;
+
+    {
+        PerformanceTest test("Logging 10000 messages");
+        for (size_t i = 0; i < log_count; ++i) {
+            ilog_debug("Test log number: %zu", i);
+            // ilog(IL::Debug) << "test" << "for" << i << "hello, world!" << std::endl;
+        }
+    } // 出作用域，自动输出耗时
 
     return 0;
 }
