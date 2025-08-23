@@ -70,9 +70,11 @@ namespace IrisLog
     class NonLogger final : public Logger
     {
     public:
-        bool enable(const Metadata& metadata) noexcept override;
-        void log(const Record& record) noexcept override;
-        void flush() noexcept override;
+        bool enable(const Metadata& metadata) noexcept override
+        { return false; }
+
+        void log(const Record& record) noexcept override{}
+        void flush() noexcept override {}
     };
 
 
@@ -81,9 +83,14 @@ namespace IrisLog
     class Logstream
     {
     public:
-        explicit Logstream(Logger* logger, std::string_view target);
-        explicit Logstream(Logger* logger);
-        void reset(Level level);
+        explicit Logstream(Logger* logger, const std::optional<std::string_view>& target = std::nullopt): target_(target), logger_(logger)
+        {}
+        void reset(const Level level)
+        {
+            level_ = level;
+            get_oss().str({});
+            get_oss().clear();
+        }
 
         template<typename T>
         Logstream& operator<<(T&& value)
@@ -100,7 +107,19 @@ namespace IrisLog
             return *this;
         }
 
-        void flush() const;
+        void flush() const
+        {
+            auto& local_oss = get_oss();
+            if (const auto logger = logger_.load(std::memory_order_acquire)) {
+                if (const Metadata md{level_, target_.value_or(local_target_)}; logger->enable(md)) {
+                    const std::string msg = local_oss.str(); // 局部复制，线程安全
+                    const Record rec{md, msg, file_, line_};
+                    logger->log(rec);
+                }
+            }
+            local_oss.str({});
+            local_oss.clear();
+        }
 
 
         template<Level T>
@@ -132,6 +151,8 @@ namespace IrisLog
             return oss;
         }
     };
+    inline NonLogger default_logger;
+    inline Logstream logger(&default_logger);
 
     class LoggerInstance
     {
@@ -142,9 +163,18 @@ namespace IrisLog
             return instance;
         }
 
-        bool set_logger(Logger* logger) noexcept;
+        bool set_logger(Logger* logger) noexcept
+        {
+            if (logger == nullptr) return false;
+            logger_.store(logger, std::memory_order_release);
+            IrisLog::logger.set_logger(logger);
+            return true;
+        }
 
-        [[nodiscard]] Logger* logger() const noexcept;
+        [[nodiscard]] Logger* logger() const noexcept
+        {
+            return logger_.load(std::memory_order_acquire);
+        }
 
     private:
         LoggerInstance() noexcept = default;
@@ -152,10 +182,7 @@ namespace IrisLog
     };
 
 
-    extern LoggerInstance& instance;
-    extern Logstream logger;
-
-
+    inline extern LoggerInstance& instance = LoggerInstance::instance();
     namespace Detail
     {
         constexpr bool _static_level_check(const Level level) noexcept

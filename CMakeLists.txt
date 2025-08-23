@@ -3,8 +3,9 @@ project(IrisLog)
 
 set(CMAKE_CXX_STANDARD 17)
 
-add_library(IrisLog STATIC src/IrisLog.cpp
-)
+add_library(IrisLog STATIC include/IrisLog.h
+        src/IrisLog.cpp
+        src/IrisLog.h)
 
 target_include_directories(IrisLog PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
